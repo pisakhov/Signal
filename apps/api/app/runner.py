@@ -82,7 +82,13 @@ def start(slug: str, preferred_port: Optional[int] = None) -> int:
     if not entry.is_file():
         raise FileNotFoundError(str(entry))
     port = _find_free_port(preferred_port or settings.dash_port_range_start)
-    env = {**os.environ, "PORT": str(port), "HOST": "127.0.0.1", "PYTHONUNBUFFERED": "1"}
+    env = {
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": os.environ.get("HOME", ""),
+        "PORT": str(port),
+        "HOST": "127.0.0.1",
+        "PYTHONUNBUFFERED": "1",
+    }
     _logs[slug] = deque(maxlen=1000)
     api_project = Path(__file__).resolve().parents[1]
     proc = subprocess.Popen(

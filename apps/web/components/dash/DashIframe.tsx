@@ -17,9 +17,11 @@ import { Button } from "@/components/ui/button";
 export function DashIframe({
   project,
   refreshKey = 0,
+  ownedByMe = false,
 }: {
   project: Project;
   refreshKey?: number;
+  ownedByMe?: boolean;
 }) {
   const [port, setPort] = useState<number | null>(project.port);
   const [busy, setBusy] = useState(false);
@@ -99,30 +101,36 @@ export function DashIframe({
       <div className="flex items-center justify-between border-b px-3 py-2 text-xs">
         <span>{port ? `Running at localhost:${port}` : "Not running"}</span>
         <div className="flex gap-2">
-          <Button size="sm" onClick={handleRedeploy} disabled={busy}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Redeploy
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={handleStop}
-            disabled={busy || !port}
-          >
-            <Power className="mr-2 h-4 w-4" />
-            Stop
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              window.open(`/dashboard/${project.id}`, "_blank", "noopener")
-            }
-            disabled={!port}
-          >
-            <ExternalLink className="mr-2 h-4 w-4" />
-            Open
-          </Button>
+          {ownedByMe && (
+            <>
+              <Button size="sm" onClick={handleRedeploy} disabled={busy}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Redeploy
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleStop}
+                disabled={busy || !port}
+              >
+                <Power className="mr-2 h-4 w-4" />
+                Stop
+              </Button>
+            </>
+          )}
+          {project.published && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                window.open(`/dashboard/${project.id}`, "_blank", "noopener")
+              }
+              disabled={!port}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Open
+            </Button>
+          )}
         </div>
       </div>
       <div className="flex-1 bg-muted">

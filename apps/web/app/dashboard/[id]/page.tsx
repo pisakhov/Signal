@@ -21,7 +21,7 @@ export default function DashboardFullscreen({
       try {
         const list = await api.listProjects();
         const p = list.find((x) => x.id === id);
-        if (!p) {
+        if (!p || !p.published) {
           router.replace("/");
           return;
         }

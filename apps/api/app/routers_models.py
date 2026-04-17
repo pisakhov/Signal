@@ -159,7 +159,7 @@ class TestModelOut(BaseModel):
 
 @router.post("/{model_id}/test", response_model=TestModelOut)
 def test_model(
-    model_id: str, _: UserRow = Depends(current_user)
+    model_id: str, _: UserRow = Depends(require_admin)
 ) -> TestModelOut:
     """Send a 1-token ping to the configured model and report the outcome."""
     model_name, base_url, api_key = resolve(model_id)

@@ -77,8 +77,15 @@ def make_tools(project_root: Path, slug: str) -> List[Callable]:
                 "stderr": "empty command",
                 "exit_code": 2,
             }
+        if any(ch in stripped for ch in ";&|><`$\n\r"):
+            return {
+                "status": "error",
+                "stdout": "",
+                "stderr": "shell metacharacters are not allowed",
+                "exit_code": 2,
+            }
         try:
-            first = shlex.split(stripped)[0]
+            tokens = shlex.split(stripped)
         except ValueError as exc:
             return {
                 "status": "error",
@@ -86,6 +93,7 @@ def make_tools(project_root: Path, slug: str) -> List[Callable]:
                 "stderr": f"parse error: {exc}",
                 "exit_code": 2,
             }
+        first = tokens[0]
         if first not in BASH_WHITELIST:
             return {
                 "status": "error",
@@ -94,7 +102,6 @@ def make_tools(project_root: Path, slug: str) -> List[Callable]:
                 "exit_code": 126,
             }
         if first in {"rm", "mv"}:
-            tokens = shlex.split(stripped)
             for arg in tokens[1:]:
                 if Path(arg).name in PROTECTED_FILES:
                     return {
@@ -151,8 +158,7 @@ def make_tools(project_root: Path, slug: str) -> List[Callable]:
                 "exit_code": 0,
             }
         result = subprocess.run(
-            stripped,
-            shell=True,
+            tokens,
             cwd=str(project_root),
             capture_output=True,
             text=True,

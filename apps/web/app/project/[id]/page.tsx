@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { api, Project } from "@/lib/api";
+import { api, Project, User } from "@/lib/api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { ChatPanel } from "@/components/chat/ChatPanel";
@@ -19,12 +19,15 @@ export default function ProjectPage({
 }) {
   const { id } = use(params);
   const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
   const [project, setProject] = useState<Project | null>(null);
   const [filesRefreshKey, setFilesRefreshKey] = useState(0);
 
   useEffect(() => {
     (async () => {
       try {
+        const me = await api.me();
+        setUser(me);
         const list = await api.listProjects();
         const p = list.find((x) => x.id === id);
         if (!p) {
@@ -32,13 +35,15 @@ export default function ProjectPage({
           return;
         }
         setProject(p);
-        try {
-          const { running } = await api.logs(p.id);
-          if (!running || !p.port) {
-            const { port } = await api.redeploy(p.id);
-            setProject({ ...p, port });
-          }
-        } catch {}
+        if (p.owner_id === me.id) {
+          try {
+            const { running } = await api.logs(p.id);
+            if (!running || !p.port) {
+              const { port } = await api.redeploy(p.id);
+              setProject({ ...p, port });
+            }
+          } catch {}
+        }
       } catch {
         router.replace("/login");
       }
@@ -56,7 +61,8 @@ export default function ProjectPage({
     })();
   }, [filesRefreshKey, id]);
 
-  if (!project) return null;
+  if (!project || !user) return null;
+  const ownedByMe = project.owner_id === user.id;
 
   return (
     <main className="flex h-full min-h-0 flex-1 overflow-hidden">
@@ -87,7 +93,11 @@ export default function ProjectPage({
             <FilesPane projectId={project.id} refreshKey={filesRefreshKey} />
           </TabsContent>
           <TabsContent value="app" className="flex-1 overflow-hidden">
-            <DashIframe project={project} refreshKey={filesRefreshKey} />
+            <DashIframe
+              project={project}
+              refreshKey={filesRefreshKey}
+              ownedByMe={ownedByMe}
+            />
           </TabsContent>
         </Tabs>
       </section>
