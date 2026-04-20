@@ -15,6 +15,7 @@ export type Project = {
   published: boolean;
   created_at: string;
   updated_at: string;
+  owned_by_me: boolean;
 };
 
 export type FileEntry = { path: string; is_dir: boolean; size: number };
@@ -25,6 +26,14 @@ export type ModelConfig = {
   model: string;
   base_url: string;
   created_at: string;
+};
+
+export type HistoryEntry = {
+  hash: string;
+  short_hash: string;
+  message: string;
+  author: string;
+  timestamp: string;
 };
 
 async function request<T>(
@@ -88,10 +97,23 @@ export const api = {
     }),
   redeploy: (id: string) =>
     request<{ port: number }>(`/projects/${id}/redeploy`, { method: "POST" }),
+  start: (id: string) =>
+    request<{ port: number }>(`/projects/${id}/start`, { method: "POST" }),
   stop: (id: string) =>
     request<{ status: string }>(`/projects/${id}/stop`, { method: "POST" }),
   logs: (id: string) =>
     request<{ text: string; running: boolean }>(`/projects/${id}/logs`),
+  history: (id: string) => request<HistoryEntry[]>(`/projects/${id}/history`),
+  revert: (id: string, commit: string) =>
+    request<{ status: string; commit: string | null; port: number }>(
+      `/projects/${id}/revert`,
+      {
+        method: "POST",
+        body: JSON.stringify({ commit }),
+      },
+    ),
+  fork: (id: string) =>
+    request<Project>(`/projects/${id}/fork`, { method: "POST" }),
   listModels: () => request<ModelConfig[]>("/models"),
   createModel: (body: {
     label: string;

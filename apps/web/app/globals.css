@@ -128,3 +128,12 @@
     @apply font-sans;
   }
 }
+
+@keyframes fade-out {
+  0% {
+    opacity: 0.4;
+  }
+  100% {
+    opacity: 0;
+  }
+}

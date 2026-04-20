@@ -1,9 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Trash2, GitFork } from "lucide-react";
+import { toast } from "sonner";
 
-import { Project } from "@/lib/api";
+import { api, Project } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -12,9 +14,27 @@ type Props = {
   ownedByMe: boolean;
   onDelete: () => void;
   onPublish: () => void;
+  onForked?: () => void;
 };
 
-export function ProjectCard({ project, ownedByMe, onDelete, onPublish }: Props) {
+export function ProjectCard({ project, ownedByMe, onDelete, onPublish, onForked }: Props) {
+  const [forking, setForking] = useState(false);
+
+  async function handleFork() {
+    setForking(true);
+    try {
+      await api.fork(project.id);
+      toast.success(`Forked "${project.title}"`);
+      onForked?.();
+    } catch (err) {
+      toast.error(`Fork failed: ${(err as Error).message}`);
+    } finally {
+      setForking(false);
+    }
+  }
+
+  const canFork = project.published && !ownedByMe;
+
   return (
     <Card className="flex flex-col">
       <CardHeader>
@@ -29,7 +49,7 @@ export function ProjectCard({ project, ownedByMe, onDelete, onPublish }: Props) 
         <Link href={`/project/${project.id}`}>
           <Button size="sm">Open</Button>
         </Link>
-        {ownedByMe && (
+        {ownedByMe ? (
           <div className="flex gap-1">
             <Button size="sm" variant="outline" onClick={onPublish}>
               {project.published ? (
@@ -42,7 +62,17 @@ export function ProjectCard({ project, ownedByMe, onDelete, onPublish }: Props) 
               <Trash2 className="h-4 w-4" />
             </Button>
           </div>
-        )}
+        ) : canFork ? (
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={handleFork}
+            disabled={forking}
+            title="Create a copy of this project"
+          >
+            <GitFork className="h-4 w-4" />
+          </Button>
+        ) : null}
       </CardFooter>
     </Card>
   );

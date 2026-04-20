@@ -58,6 +58,18 @@ def status(slug: str) -> Optional[int]:
     return getattr(proc, "_port", None)
 
 
+def health_check(slug: str) -> bool:
+    """Check if the Dash process is actually serving requests."""
+    port = status(slug)
+    if port is None:
+        return False
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=1.0):
+            return True
+    except OSError:
+        return False
+
+
 def logs(slug: str) -> str:
     """Return the captured stdout+stderr text for the project's latest run."""
     return "".join(_logs.get(slug, []))
@@ -105,3 +117,10 @@ def start(slug: str, preferred_port: Optional[int] = None) -> int:
     threading.Thread(target=_drain, args=(slug, proc), daemon=True).start()
     _wait_for_port(port, proc)
     return port
+
+
+def cleanup_orphans() -> None:
+    """Stop all tracked processes. Call on startup to clean up orphaned processes."""
+    for slug in list(_processes.keys()):
+        stop(slug)
+

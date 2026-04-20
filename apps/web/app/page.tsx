@@ -92,9 +92,10 @@ export default function GalleryPage() {
           <ProjectCard
             key={p.id}
             project={p}
-            ownedByMe={p.owner_id === user.id}
+            ownedByMe={p.owned_by_me}
             onDelete={() => handleDelete(p.id)}
             onPublish={() => handlePublish(p.id)}
+            onForked={refresh}
           />
         ))}
         {projects.length === 0 && (

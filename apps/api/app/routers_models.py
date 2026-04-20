@@ -4,7 +4,7 @@ import os
 import time
 import uuid
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
 import litellm
 from dotenv import set_key
@@ -59,8 +59,8 @@ def _row_to_out(row) -> ModelConfigOut:
     )
 
 
-@router.get("", response_model=List[ModelConfigOut])
-def list_models(_: UserRow = Depends(current_user)) -> List[ModelConfigOut]:
+@router.get("", response_model=list[ModelConfigOut])
+def list_models(_: UserRow = Depends(current_user)) -> list[ModelConfigOut]:
     """Return every model config available for chat selection."""
     con = connect()
     rows = con.execute(
@@ -176,8 +176,8 @@ def test_model(
             model=f"openai/{model_name}",
             api_base=base_url,
             api_key=api_key,
-            messages=[{"role": "user", "content": "ping"}],
-            max_tokens=1,
+            messages=[{"role": "user", "content": "hi"}],
+            max_tokens=10,
         )
         latency_ms = int((time.perf_counter() - t0) * 1000)
         reply = response.choices[0].message.content or ""

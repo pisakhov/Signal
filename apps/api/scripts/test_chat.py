@@ -13,7 +13,9 @@ import httpx
 
 BASE_URL = os.environ.get("API_URL", "http://localhost:8000")
 USERNAME = os.environ.get("TEST_USERNAME", "admin")
-PASSWORD = os.environ.get("TEST_PASSWORD", "1Lk232lmg0")
+PASSWORD = os.environ.get("TEST_PASSWORD")
+if not PASSWORD:
+    sys.exit("TEST_PASSWORD environment variable is required")
 PROJECT_ID = os.environ.get("TEST_PROJECT_ID")
 MODEL_ID = os.environ.get("TEST_MODEL_ID")
 PROMPT = os.environ.get("TEST_PROMPT", "hi")

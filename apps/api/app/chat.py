@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 from . import routers_models
-from .agent.agent import build_agent
+from .agent.agent import build_agent, build_readonly_agent
 from .auth import UserRow, current_user
 from .db import connect
 from .settings import settings
@@ -31,19 +31,22 @@ class ChatIn(BaseModel):
 
 
 _SELECT = (
-    "SELECT p.id, p.owner_id, p.slug FROM projects p WHERE p.id = ?"
+    "SELECT p.id, p.owner_id, p.slug, p.published FROM projects p WHERE p.id = ?"
 )
 
 
-def _project_root_for(project_id: str, user: UserRow) -> tuple[Path, str]:
+def _project_root_for(project_id: str, user: UserRow) -> tuple[Path, str, bool]:
+    """Return (project_root, slug, is_owner)."""
     con = connect()
     row = con.execute(_SELECT, [project_id]).fetchone()
     con.close()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "project not found")
-    if row[1] != user.id and not user.is_admin:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, "not your project")
-    return Path(settings.projects_root).resolve() / row[2], row[2]
+    is_owner = row[1] == user.id or user.is_admin
+    is_published = bool(row[3])
+    if not is_owner and not is_published:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "project not published")
+    return Path(settings.projects_root).resolve() / row[2], row[2], is_owner
 
 
 @router.post("/{project_id}/chat")
@@ -51,12 +54,17 @@ async def chat(
     project_id: str, body: ChatIn, user: UserRow = Depends(current_user)
 ):
     """Stream ADK agent events as Server-Sent Events."""
-    project_root, slug = _project_root_for(project_id, user)
+    project_root, slug, is_owner = _project_root_for(project_id, user)
     model_name, base_url, api_key = routers_models.resolve(body.model_id)
     model = LiteLlm(
         model=f"openai/{model_name}", api_base=base_url, api_key=api_key
     )
-    agent = build_agent(project_root, slug, model=model)
+    # Use read-only agent for non-owners viewing published projects
+    agent = (
+        build_agent(project_root, slug, model=model)
+        if is_owner
+        else build_readonly_agent(project_root, slug, model=model)
+    )
     runner = InMemoryRunner(agent=agent, app_name="quant-research")
     session = await runner.session_service.create_session(
         app_name="quant-research", user_id=user.id
@@ -64,7 +72,7 @@ async def chat(
     content = types.Content(role="user", parts=[types.Part(text=body.message)])
 
     async def stream() -> AsyncIterator[dict]:
-        logger.info("chat.stream start project=%s model=%s", project_id, model_name)
+        logger.info("chat.stream start project=%s model=%s readonly=%s", project_id, model_name, not is_owner)
         event_count = 0
         try:
             async for event in runner.run_async(

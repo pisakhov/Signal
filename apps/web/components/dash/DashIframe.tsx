@@ -13,6 +13,9 @@ import { toast } from "sonner";
 
 import { api, Project } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { VersionNav } from "@/components/history/VersionNav";
+
+const DASH_BASE_URL = process.env.NEXT_PUBLIC_DASH_BASE_URL || "";
 
 export function DashIframe({
   project,
@@ -70,6 +73,11 @@ export function DashIframe({
     }
   }
 
+  async function handleReverted() {
+    // Reload the app to show the reverted state
+    setNonce((n) => n + 1);
+  }
+
   useEffect(() => {
     let cancelled = false;
     async function tick() {
@@ -94,15 +102,26 @@ export function DashIframe({
     }
   }, [logs]);
 
-  const src = port ? `http://localhost:${port}?v=${nonce}` : null;
+  const src = port
+    ? `${DASH_BASE_URL || `http://localhost:${port}`}?v=${nonce}`
+    : null;
 
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-3 py-2 text-xs">
-        <span>{port ? `Running at localhost:${port}` : "Not running"}</span>
+        <span>
+          {port
+            ? `Running at ${DASH_BASE_URL || `localhost`}:${port}`
+            : "Not running"}
+        </span>
         <div className="flex gap-2">
           {ownedByMe && (
             <>
+              <VersionNav
+                projectId={project.id}
+                refreshKey={refreshKey}
+                onNavigate={handleReverted}
+              />
               <Button size="sm" onClick={handleRedeploy} disabled={busy}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Redeploy

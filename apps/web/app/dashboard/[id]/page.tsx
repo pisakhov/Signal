@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 
 import { api, Project } from "@/lib/api";
 
+const DASH_BASE_URL = process.env.NEXT_PUBLIC_DASH_BASE_URL || "";
+
 export default function DashboardFullscreen({
   params,
 }: {
@@ -27,7 +29,7 @@ export default function DashboardFullscreen({
         }
         setProject(p);
         try {
-          const { port: newPort } = await api.redeploy(p.id);
+          const { port: newPort } = await api.start(p.id);
           setPort(newPort);
         } catch (err) {
           setError((err as Error).message);
@@ -58,7 +60,7 @@ export default function DashboardFullscreen({
 
   return (
     <iframe
-      src={`http://localhost:${port}`}
+      src={DASH_BASE_URL || `http://localhost:${port}`}
       title={project.title}
       className="h-screen w-screen border-0"
     />

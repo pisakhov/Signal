@@ -1,4 +1,5 @@
 """Environment-driven settings for the API."""
+import sys
 from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -24,6 +25,7 @@ class Settings(BaseSettings):
     api_port: int = 8000
     session_secret: str = "change-me"
     dash_port_range_start: int = 8100
+    cors_origins: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
         env_file=str(ROOT / ".env"),
@@ -37,6 +39,19 @@ class Settings(BaseSettings):
     def _absolutize(cls, v: str) -> str:
         """Normalize path settings to absolute paths anchored at the repo root."""
         return _abs(v)
+
+    @field_validator("session_secret")
+    @classmethod
+    def _validate_session_secret(cls, v: str) -> str:
+        """Reject insecure placeholder SESSION_SECRET values."""
+        insecure_values = {"change-me", "changeme", "", "secret", "password"}
+        if v.lower().strip() in insecure_values:
+            print(
+                "ERROR: SESSION_SECRET must be set to a secure random value. "
+                "Generate one with: openssl rand -hex 32"
+            )
+            sys.exit(1)
+        return v
 
 
 settings = Settings()

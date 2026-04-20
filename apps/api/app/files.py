@@ -1,13 +1,14 @@
 """Sandboxed filesystem helpers for per-project folders."""
 from pathlib import Path
-from typing import List
 
 from fastapi import HTTPException, status
 
 from .settings import settings
+from .utils import PROTECTED_FILES
 
 
-PROTECTED_FILES = {"dash_app.py"}
+# Maximum file size: 10 MB
+MAX_FILE_SIZE = 10 * 1024 * 1024
 
 
 def project_dir(slug: str) -> Path:
@@ -28,12 +29,12 @@ def resolve(slug: str, rel: str) -> Path:
     return target
 
 
-def list_tree(slug: str) -> List[dict]:
+def list_tree(slug: str) -> list[dict]:
     """Return a flat listing of all files in the project sandbox."""
     root = project_dir(slug)
     if not root.exists():
         return []
-    out: List[dict] = []
+    out: list[dict] = []
     for p in sorted(root.rglob("*")):
         if any(part.startswith(".") for part in p.relative_to(root).parts):
             continue
@@ -57,6 +58,13 @@ def read_text(slug: str, rel: str) -> str:
 
 def write_text(slug: str, rel: str, content: str) -> None:
     """Write UTF-8 content to a file, creating parents as needed."""
+    # Check content size
+    content_size = len(content.encode("utf-8"))
+    if content_size > MAX_FILE_SIZE:
+        raise HTTPException(
+            status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            f"File too large (max {MAX_FILE_SIZE // 1024 // 1024} MB)",
+        )
     path = resolve(slug, rel)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")

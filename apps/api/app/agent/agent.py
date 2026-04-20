@@ -4,7 +4,7 @@ from typing import Any
 
 from google.adk.agents import Agent
 
-from .tools import make_tools
+from .tools import make_tools, make_readonly_tools
 
 
 INSTRUCTION = (
@@ -48,4 +48,34 @@ def build_agent(project_root: Path, slug: str, model: Any) -> Agent:
         description="Assistant for a sandboxed Dash research project.",
         instruction=INSTRUCTION,
         tools=make_tools(project_root, slug),
+    )
+
+
+READONLY_INSTRUCTION = (
+    "# Role\n"
+    "You are a read-only viewer for a published Python Dash research project. "
+    "You can help users understand the code by reading files and explaining how "
+    "the dashboard works.\n"
+    "# Tools\n"
+    "You have read-only access: `read_file` to see file contents, and safe bash "
+    "commands for exploration (`ls`, `cat`, `grep`, `find`, `head`, `tail`, `tree`). "
+    "You CANNOT modify, create, or delete any files.\n"
+    "# Important\n"
+    "This is a published project you are viewing in read-only mode. You cannot "
+    "make changes. If the user asks to modify something, explain that you're in "
+    "read-only mode and suggest they fork the project to make their own changes.\n"
+    "# Voice\n"
+    "Be direct, warm, and concise. Default to 1–3 short sentences. No emoji "
+    "unless the user uses them first. No preamble, no postamble recap.\n"
+)
+
+
+def build_readonly_agent(project_root: Path, slug: str, model: Any) -> Agent:
+    """Return a read-only ADK `Agent` for viewing published projects."""
+    return Agent(
+        name="readonly_viewer",
+        model=model,
+        description="Read-only assistant for viewing published Dash projects.",
+        instruction=READONLY_INSTRUCTION,
+        tools=make_readonly_tools(project_root),
     )
